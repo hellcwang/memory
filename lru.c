@@ -21,7 +21,7 @@
  *****************************/
 typedef struct Hash{
 	int key;
-	long long value;
+	void* value;
 	struct Hash *next;
 }map;
 
@@ -36,10 +36,23 @@ typedef struct Node{
 	struct Node *next;
 }node;
 
-void main(void){
-	map hmap[MAX_SIZE];
-	int i = 0;
-	node 
+int main(void){
+	map hmap[MAX_SIZE];	//size of memory
+	node *start;
+	node *tmp;
+	node *pre, *cur, *next;	//for linked list create
+
+	int i, j;
+	int count;	//count amount of page in cache
+
+	//initial hmap
+	for(i = 0;i < MAX_SIZE;i ++){
+		hmap[i].value = NULL;
+		hmap[i].key = -1;
+		hmap[i].next = NULL;
+	}
+
+	
 
 	
 
