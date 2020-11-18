@@ -5,8 +5,7 @@
  * hellc
  * 28102020
  *****************************/
-#include <stdio.h>
-#include <stdlib.h>
+#include "lru.h"
 
 /**********************
  * MAX_SIZE is the max size of memory
@@ -19,40 +18,25 @@
  * value = address of key in linked list
  * next point to next struct of map
  *****************************/
-typedef struct Hash{
+/*typedef struct Hash{
 	int key;
 	void* value;
 	struct Hash *next;
 }map;
+*/
 
 /*****************************
  * Node of "double" linked list
  * Main value is blockname
  * Fast to mantain
  ****************************/
-typedef struct Node{
+/*typedef struct Node{
 	struct Node *pre;
 	int blockname;
 	struct Node *next;
 }node;
+*/
 
-int main(void){
-	map hmap[MAX_SIZE];	//size of memory
-	node *start;
-	node *tmp;
-	node *pre, *cur, *next;	//for linked list create
-
-	int i, j;
-	int count;	//count amount of page in cache
-
-	//initial hmap
-	for(i = 0;i < MAX_SIZE;i ++){
-		hmap[i].value = NULL;
-		hmap[i].key = -1;
-		hmap[i].next = NULL;
-	}
-
-	
-
+void hmap_init(map *first, int max){
 	
 
