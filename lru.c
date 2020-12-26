@@ -5,7 +5,7 @@
  * hellc
  * 28102020
  *****************************/
-#include "lru.h"
+#include "./lib/lru.h"
 
 /**********************
  * MAX_SIZE is the max size of memory
@@ -32,11 +32,110 @@
  ****************************/
 /*typedef struct Node{
 	struct Node *pre;
+	int index;
 	int blockname;
 	struct Node *next;
 }node;
 */
+void hmap_init(map **first){
+	int i, j;
+	first = malloc(MAX_SIZE * sizeof(map));
+	for(i = 0;i < MAX_SIZE;i ++){
+		first[i]->value = NULL;
+		first[i]->key = -1;
+		first[i]->next = NULL;
+	}
+	return;
+}
 
-void hmap_init(map *first, int max){
+void hmap_add(int blockname, node* n, map** h){
+	map *current;
+	int key = blockname % MAX_SIZE;
+	current = h[key];
+
+	while(current->value != NULL){
+		current = current->next;
+	}
+
+	current->value = n;
+	current->key = blockname;
+	current->next = malloc(sizeof(map));
+	current = current->next;
+	current->value = NULL;
+	current->next = NULL;
+
+	return ;
+}
+
+void hmap_delete(int blockname, map** h){
+	int key = blockname % MAX_SIZE;
+	map* current = h[key];
+	map* pre = NULL;
+
+	while(current->key != blockname){
+		pre = current;
+		current = current->next;
+	}
+
+	if(pre != NULL){
+		pre->next = current->next;
+		free(current);
+		return ;
+	}else{
+		current->value = current->next = NULL;
+		current->key = -1;
+		return ;
+	}
+}
+
+node* block_add(int b_name, node** head, node** tail,int index){
+	node* new;
+	new = malloc(sizeof(node));
+	if(*tail == NULL)
+		*tail = new;
+	if(*head != NULL){
+		(*head)->pre = new;
+		new->next = *head;
+		new->pre = NULL;
+		*head = new;
+	}else{
+		new->next = NULL;
+		new->pre = NULL;
+		*head = new;
+	}
+	new->index  = index;
+	new->blockname = b_name;	
 	
+	return new;
+}
+
+void block_alter(node* n, node** head){
+	if(n != *head){
+		n->pre->next = n->next;
+		n->next->pre = n->pre;
+		n->pre = NULL;
+		n->next = *head;
+	}
+	return ;
+}
+
+void block_delete(node** tail){
+	(*tail)->pre->next = NULL;
+	node* d = *tail;
+	*tail = (*tail)->pre;
+	free(d);
+	return ;
+}
+	
+
+node* block_find(int b_name, map** h){
+	int key = b_name % MAX_SIZE;
+	map* cur = h[key];
+
+	while(cur->key != b_name){
+		cur = cur->next;
+	}
+	return cur->value;
+}
+
 
