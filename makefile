@@ -2,6 +2,8 @@ CC = gcc
 INC_DIR = lib
 CFLAGS =-c -WALL -I
 OBJ_DIR = object
-lru:lru.c
-	gcc -o lru lru.c
+liblru.so:lru.c
+	$(CC) -g -fPIC -c lru.c
+	$(CC) -shared lru.o -o liblru.so
+	rm lru.o
 
