@@ -32,15 +32,17 @@ typedef struct Hash{
  ****************************/
 typedef struct Node{
         struct Node *pre;
-        int blockname;
+	unsigned int index;
+        unsigned int blockname;
         struct Node *next;
 }node;
 
-void block_find(int);
-node* block_delete(void);
-void block_alter(node*);
-node* block_add(int);
-void hmap_delete(int);
-void hmap_add(int, void*);
+node* block_find(int, map**);
+void block_delete(node** );
+void block_alter(node*, node**);
+node* block_add(int, node**, node**, int);
+void hmap_delete(int, map**);
+void hmap_add(int, node*, map**);
+void hmap_init(map**);
 
 
