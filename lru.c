@@ -89,8 +89,13 @@ void hmap_delete(int blockname, map** h){
 		free(current);
 		return ;
 	}else{
+		if(current->next != NULL){
+			h[key] = current->next;
+			free(current);
+		}else{
 		current->value = current->next = NULL;
-		current->key = -1;
+		current->key = -2;
+		}
 		return ;
 	}
 }
