@@ -7,3 +7,7 @@ liblru.so:lru.c
 	$(CC) -shared lru.o -o liblru.so
 	rm lru.o
 
+test:test.c
+	$(CC) -c test.c
+	$(CC) -o test test.o -L. -llru
+
