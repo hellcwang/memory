@@ -38,11 +38,11 @@ typedef struct Node{
 }node;
 
 node* block_find(int, map**);
-void block_delete(node** );
-void block_alter(node*, node**);
+int block_delete(node** );
+void block_alter(node*, node**, node**);
 node* block_add(int, node**, node**, int);
 void hmap_delete(int, map**);
 void hmap_add(int, node*, map**);
-void hmap_init(map**);
+void hmap_init(map***);
 
 

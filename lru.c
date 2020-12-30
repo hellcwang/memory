@@ -37,13 +37,20 @@
 	struct Node *next;
 }node;
 */
-void hmap_init(map **first){
+
+/*
+ * Use *** to sent pointer of map back to main
+ * So the hash map is array of pointer to each entry
+ **/
+void hmap_init(map ***first){
 	int i, j;
-	first = malloc(MAX_SIZE * sizeof(map));
+	map* tmp;
+	*first = malloc(MAX_SIZE * sizeof(map*));
 	for(i = 0;i < MAX_SIZE;i ++){
-		first[i]->value = NULL;
-		first[i]->key = -1;
-		first[i]->next = NULL;
+		tmp = *((*first )+i)= malloc(sizeof(map));
+		tmp->value = NULL;
+		tmp->key = -1;
+		tmp->next = NULL;
 	}
 	return;
 }
@@ -109,22 +116,31 @@ node* block_add(int b_name, node** head, node** tail,int index){
 	return new;
 }
 
-void block_alter(node* n, node** head){
+void block_alter(node* n, node** head, node** tail){
+	if(n == *head)
+		return ;
+	if(n == *tail ){
+		*tail = n->pre;
+	}
 	if(n != *head){
 		n->pre->next = n->next;
-		n->next->pre = n->pre;
+		if(n->next != NULL)
+			n->next->pre = n->pre;
 		n->pre = NULL;
 		n->next = *head;
+		(*head)->pre = n;
 	}
+	*head = n;
 	return ;
 }
 
-void block_delete(node** tail){
+int block_delete(node** tail){
+	int b_name = (*tail)->blockname;
 	(*tail)->pre->next = NULL;
 	node* d = *tail;
 	*tail = (*tail)->pre;
 	free(d);
-	return ;
+	return b_name;
 }
 	
 
@@ -132,9 +148,11 @@ node* block_find(int b_name, map** h){
 	int key = b_name % MAX_SIZE;
 	map* cur = h[key];
 
-	while(cur->key != b_name){
+	while(cur->key != b_name && cur->next != NULL){
 		cur = cur->next;
 	}
+	if(cur->next == NULL)
+		return NULL;
 	return cur->value;
 }
 
