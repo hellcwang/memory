@@ -1,12 +1,25 @@
 #include "lib/lru.h"
+#undef MAX_SIZE
 
-int main(void){
+int main(int argc, char* argv[]){
 
-        FILE *f;
+	int MAX_SIZE = atoi(argv[1]);
+        FILE *f, *o;
         float time;
         int user, b_name, size, read;
-        f = fopen("run1_usr1.txt", "r");
-	//f = fopen("same","r");
+	char buffer[100] = {0};
+	sprintf(buffer, "data/%s", argv[2]);
+        f = fopen(buffer, "r");
+	if(f == NULL){
+		printf("f ERROR\n");
+		return 1;
+	}
+	sprintf(buffer, "%s.log", buffer);
+	o = fopen(buffer,"a");
+	if(o == NULL){
+		printf("o ERROR\n");
+		return 1;
+	}
         if(f == NULL){
                 printf("NO FILE!!\n");
                 return -1;
@@ -23,6 +36,7 @@ int main(void){
 
 	//Use index to represent the order
 	int index = 0;
+	int hit = 0;
 
 	//Determine if over max size or not
 	int p_count = 0;
@@ -32,6 +46,7 @@ int main(void){
 	int tmp_index;
 	int tmp_b_name;
 	int line = 0;
+	
 
 	//Deleted block name
 	int d_b_name;
@@ -43,6 +58,7 @@ int main(void){
 
 		//printf("line:%d ", line++);
 		//printf("%d:",index);
+		index++;
 		if(block_find(b_name, dram) == NULL && block_find(b_name, pram) == NULL){
 			//printf("miss ");
 			if(read == 0){
@@ -99,6 +115,7 @@ int main(void){
 
 		//Cache hit
 		}else{
+			hit++;
 			if(block_find(b_name, dram) != NULL){
 			       block_alter(block_find(b_name, dram), &d_head, &d_tail);
 			}else if(block_find(b_name, pram) != NULL){
@@ -109,6 +126,8 @@ int main(void){
         }
 	
 
+	fprintf(o, "%d %f\n",MAX_SIZE, (float)hit/index);
+	fclose(o);
 	fclose(f);
         return 0;
 
