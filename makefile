@@ -5,7 +5,6 @@ OBJ_DIR = object
 liblru.so:lru.c
 	$(CC) -g -fPIC -c lru.c
 	$(CC) -shared lru.o -o liblru.so
-<<<<<<< HEAD
 
 test:test.c
 	$(CC) -c test.c
@@ -16,17 +15,12 @@ lru.o:lru.c
 dwf:dwf.c lru.o
 	$(CC) -c -g dwf.c
 	$(CC) -o dwf dwf.o lru.o -g
-=======
 
-lru.o:lru.c lib/lru.h
-	$(CC) -c lru.c
+cache:dram_cache.c lru.o
+	$(CC) -c -g dram_cache.c
+	$(CC) -o cache dram_cache.o lru.o -g
 
-test:test.c
-	$(CC) -c test.c
-	$(CC) -o test test.o lru.o
-
-dwf:dwf.c lru.o
-	$(CC) -c dwf.c
-	$(CC) -o dwf dwf.o lru.o
->>>>>>> 294ef7b76c34e3f3f746d0afa6f5bde295e26188
-
+total_lru:total_lru.c lru.o
+	$(CC) -c -g total_lru.c
+	$(CC) -o total_lru total_lru.o lru.o -g
+	rm total_lru.o
