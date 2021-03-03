@@ -34,9 +34,14 @@ int main(int argc, char* argv[]){
         node *d_tail = NULL;
         node *p_tail = NULL;
 
+	node* locate, locate_1;
+
 	//Use index to represent the order
 	int index = 0;
 	int hit = 0;
+
+	//write count on pram
+	int write_p = 0;
 
 	//Determine if over max size or not
 	int p_count = 0;
@@ -50,6 +55,9 @@ int main(int argc, char* argv[]){
 
 	//Deleted block name
 	int d_b_name;
+
+	//count of dram is youmger than pram
+	int y_count = 0;
 	
 	hmap_init(&dram);
 	hmap_init(&pram);
@@ -80,7 +88,8 @@ int main(int argc, char* argv[]){
 
 					// Compare if invicted of DRAM is younger than head of PRAM
 					// Yes -> put it to head of PRAM
-					}else if(p_head != NULL && d_tail->index < p_head->index){
+					}else if(p_tail != NULL && d_tail->index > p_tail->index){
+						y_count++;
 						//printf("d->p ");
 						//move from dram to pram
 						tmp_b_name = d_tail->blockname;
@@ -119,14 +128,41 @@ int main(int argc, char* argv[]){
 			if(block_find(b_name, dram) != NULL){
 			       block_alter(block_find(b_name, dram), &d_head, &d_tail);
 			}else if(block_find(b_name, pram) != NULL){
-			       block_alter(block_find(b_name, pram), &p_head, &p_tail);
+				if(read == 0){
+					write_p ++;
+					locate = block_find(b_name, pram);
+					tmp_b_name = locate->blockname;
+					tmp_index = locate->index;
+					hmap_delete(tmp_b_name, pram);
+					hmap_add(d_tail->blockname, locate, pram);
+					
+					locate->blockname = d_tail->blockname;
+					locate->index = d_tail->index;
+					//////////pram done/////////
+					/////////dram /////////
+
+					hmap_delete(d_tail->blockname, dram);
+					hmap_add(tmp_b_name, d_tail, dram);
+					
+					d_tail->blockname = tmp_b_name;
+					d_tail->index = tmp_index;
+						
+			       		block_alter(d_tail, &d_head, &d_tail);
+
+
+
+				}else{
+			       		block_alter(block_find(b_name, pram), &p_head, &p_tail);
+				}
 			}
 		}
 
         }
 	
 
-	fprintf(o, "%d %f\n",MAX_SIZE, (float)hit/index);
+	fprintf(o, "%4d\t%5f\t%5f\n",MAX_SIZE, (float)hit/index, (float)write_p/index);
+	fprintf(stdout, "%4d\t%5f\t%5f\n",MAX_SIZE, (float)hit/index, (float)write_p/index);
+	//printf("ycount:%d %f%% \n",y_count, (float)y_count/index);
 	fclose(o);
 	fclose(f);
         return 0;
