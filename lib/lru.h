@@ -33,6 +33,7 @@ typedef struct Hash{
 typedef struct Node{
         struct Node *pre;
 	unsigned int index;
+	int type;
         unsigned int blockname;
         struct Node *next;
 }node;
