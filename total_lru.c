@@ -72,11 +72,12 @@ int main(int argc, char* argv[]){
 		//printf("%d:",index);
 		index++;
 		if(block_find(b_name, dram) == NULL ){
-				if(d_count >= MAX_SIZE/2 && type_count <= MAX_SIZE/2){
+				if(d_count >= MAX_SIZE/2 && type_count <= MAX_SIZE/2){  //half part of lru is pram
 					locate = d_tail;
 					while(locate->type == 1)
 						locate = locate->pre;
 					locate->type = 1;
+                                        write_p ++;                                     //write on pram
 					type_count ++;
 				}
 
