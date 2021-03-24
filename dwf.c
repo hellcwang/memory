@@ -78,6 +78,7 @@ int main(int argc, char* argv[]){
 					//If no node in PRAM
 					//U can put node from DRAM to PRAM directly
 					if(p_head== NULL){
+					        write_p ++;
 						//printf("d->p ");
 						//move from dram to pram
 						tmp_b_name = d_tail->blockname;
@@ -89,6 +90,7 @@ int main(int argc, char* argv[]){
 					// Compare if invicted of DRAM is younger than head of PRAM
 					// Yes -> put it to head of PRAM
 					}else if(p_tail != NULL && d_tail->index > p_tail->index){
+					        write_p ++;
 						y_count++;
 						//printf("d->p ");
 						//move from dram to pram
@@ -119,6 +121,7 @@ int main(int argc, char* argv[]){
 					hmap_delete(d_b_name, pram);
 					p_count --;
 				}
+				write_p ++;
 				hmap_add(b_name, block_add(b_name, &p_head, &p_tail, index++), pram);
 			}
 
@@ -161,7 +164,7 @@ int main(int argc, char* argv[]){
 	
 
 	fprintf(o, "%4d\t%5f\t%5f\n",MAX_SIZE, (float)hit/index, (float)write_p/index);
-	fprintf(stdout, "%4d\t%5f\t%5f\n",MAX_SIZE, (float)hit/index, (float)write_p/index);
+	//fprintf(stdout, "%4d\t%5f\t%5f\n",MAX_SIZE, (float)hit/index, (float)write_p/index);
 	//printf("ycount:%d %f%% \n",y_count, (float)y_count/index);
 	fclose(o);
 	fclose(f);
