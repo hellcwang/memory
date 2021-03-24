@@ -10,6 +10,7 @@ int main(int argc, char* argv[]){
         int user, b_name, size, read;
 	char buffer[100] = {0};
 	sprintf(buffer, "total_lru_data/%s", argv[2]);
+	printf("%s\n",buffer);
         f = fopen(buffer, "r");
 	if(f == NULL){
 		printf("f ERROR\n");
@@ -85,6 +86,7 @@ int main(int argc, char* argv[]){
 					d_b_name = block_delete(&d_tail);
 					hmap_delete(d_b_name, dram);
 					d_count --;
+					type_count --;					//delete from pram
 				}
 				hmap_add(b_name, block_add(b_name, &d_head, &d_tail, index++), dram);
 			

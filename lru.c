@@ -117,6 +117,7 @@ node* block_add(int b_name, node** head, node** tail,int index){
 	}
 	new->index  = index;
 	new->blockname = b_name;	
+	new->type = 0; //default is dram(0),pram is (1)
 	
 	return new;
 }
