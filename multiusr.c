@@ -9,11 +9,17 @@ pid_t pid;
 int p_count = 0;
 int d_count = 0;
 
+//write count on pram
+int write_p = 0;
 
-//communicate between child and parent
-int fd_0[2];	
-int fd_1[2];
-int fd_2[2];
+
+
+//transfer data
+int delta;
+float slope_child;
+float slope;
+
+FILE *f, *o;
 
 //Use these variable to mark blocks
 int MAX_VALUE;
@@ -22,9 +28,9 @@ int GHOST = 3;		//Can change to find best solution.
 
 
 //Use myindex to represent the order
-int old_hit = 0;
-int old_hit_ghost = 0;	//hit on ghost
-int old_hit_o= 0;		//hit on original size
+float old_hit = 0.0;
+float old_hit_ghost = 0.0;	//hit on ghost
+float old_hit_o= 0.0;		//hit on original size
 
 //Use myindex to represent the order
 int myindex = 0;	//index is conflict to finction been declared
@@ -35,16 +41,51 @@ int hit_o= 0;		//hit on original size
 /*Change the size of each process
  */
 void handler(int sig_num){
-	int done;
-	signal(SIGALRM, handler);
-	if(pid > 0){
-		done  = kill(pid, SIGALRM);
+	printf("%d alarm pid:%d\n", getpid(), pid);
+	if(pid != 0){
+		kill(pid,SIGALRM);
 	}
+	signal(SIGALRM, handler);
+	int done = 0;
+	//next hit predict
+	float n_hit = 0;
+	float n_hit_ghost = 0;
+	float n_hit_o = 0;
+	float percent = 0.0;
+	float percent_child = 0.0;
+	float slope_child = 0.0;
+	int i = 0;
+
+	if(old_hit == 0.0){
+		printf("in\n");
+		old_hit = (float)hit / myindex;
+		old_hit_ghost = (float)hit_ghost / myindex;
+		old_hit_o = (float)hit_o / myindex;
+	}
+	printf("old_hit_o:%f\n", old_hit_o);
+	printf("hit_o:%d\n", hit_o);
+	printf("myindex:%d\n", myindex);
+
+	n_hit = 0.7 * old_hit + 0.3*(hit/myindex); 
+	n_hit_ghost = 0.7 * old_hit_ghost + 0.3*(hit_ghost/myindex); 
+	n_hit_o = 0.7 * old_hit_o + 0.3*(hit_o/myindex); 
+	printf("n_hit: %f\n",n_hit);
+	percent = n_hit/n_hit_o;
+
 	
-	if(done == -1)
+	
+	if(done == -1){
+		MAX_VALUE = O_VALUE;
+		printf("-1 %d alarm\n", getpid());
+		fprintf(o, "%4d\t%5f\t%5f\n",MAX_VALUE, (float)hit/myindex, (float)write_p/myindex);
 		return ;
-	MAX_VALUE ++;
-	printf("%d alarm\n", getpid());
+	}
+	fprintf(o, "%4d\t%5f\t%5f\n",MAX_VALUE, (float)hit/myindex, (float)write_p/myindex);
+	hit = 0;
+	hit_o = 0;
+	hit_ghost = 0;
+	myindex = 0;
+	MAX_VALUE --;
 	return ;
 }
 
@@ -70,8 +111,6 @@ int main(int argc, char* argv[]){
 	node* locate, locate_1;
 
 
-	//write count on pram
-	int write_p = 0;
 
 
 	//tmprary carry myindex blockname from dram to pram
@@ -92,10 +131,12 @@ int main(int argc, char* argv[]){
 
 	O_VALUE = atoi(argv[1]);
 	MAX_VALUE = atoi(argv[1])/2;
-        FILE *f, *o;
         float time;
         int user, b_name, size, read;
 	char buffer[100] = {0};
+	int i, j;
+	node *tmp, *find;	//tmp is for MARK, find for 
+
 
 
 	/*process 0*/
@@ -138,8 +179,9 @@ int main(int argc, char* argv[]){
 	}
 
 
+	fprintf(o, "Begin:\n");
 	if(pid > 0)
-		ualarm(10000, 10000);
+		ualarm(100000, 100000);
         while(fscanf(f, "%f %d %d %d %d", &time, &user, &b_name, &size, &read)== 5){
 			
 
@@ -155,7 +197,7 @@ int main(int argc, char* argv[]){
 				
 				//DRAM is full
 				d_count ++;
-				while(d_count > MAX_VALUE){
+				while(d_count > O_VALUE){
 					//printf("d_over ");
 
 					//If no node in PRAM
@@ -182,7 +224,7 @@ int main(int argc, char* argv[]){
 						tmp_index = d_tail->index;
 
 						//If PRAM is full
-						while(p_count > MAX_VALUE){
+						while(p_count > O_VALUE){
 							d_b_name = block_delete(&p_tail);
 							hmap_delete(d_b_name, pram);
 							p_count --;
@@ -202,7 +244,7 @@ int main(int argc, char* argv[]){
 			//Put read in PRAM to protect PRAM
 			else if(read == 1){
 				p_count ++;
-				while(p_count > MAX_VALUE){
+				while(p_count > O_VALUE){
 					d_b_name = block_delete(&p_tail);
 					hmap_delete(d_b_name, pram);
 					p_count --;
@@ -213,10 +255,30 @@ int main(int argc, char* argv[]){
 
 		//Cache hit
 		}else{
-			hit++;
+			hit_o ++;
 			if(block_find(b_name, dram) != NULL){
-			       block_alter(block_find(b_name, dram), &d_head, &d_tail);
+
+				//caculate marks
+				find = block_find(b_name, dram);
+				if(find->ghost ==0 && find->o_size == 0){
+					hit_ghost ++;
+					hit ++;
+				}else if(find ->ghost){
+					hit_ghost ++;
+				}
+
+				block_alter(block_find(b_name, dram), &d_head, &d_tail);
+
 			}else if(block_find(b_name, pram) != NULL){
+				//caculate marks
+				find = block_find(b_name, pram);
+				if(find->ghost ==0 && find->o_size == 0){
+					hit_ghost ++;
+					hit ++;
+				}else if(find ->ghost){
+					hit_ghost ++;
+				}
+
 				if(read == 0){
 					write_p ++;
 					locate = block_find(b_name, pram);
@@ -246,11 +308,47 @@ int main(int argc, char* argv[]){
 			}
 		}
 
+		//Mark
+		if(d_count > MAX_VALUE){
+			tmp = d_tail;
+			if(d_count >MAX_VALUE + GHOST){
+				for(i = d_count - MAX_VALUE + GHOST;i > 0;i --){
+					tmp->o_size = 1;
+					tmp = tmp->pre;
+				}
+				for(i = GHOST;i > 0;i --){
+					tmp->ghost = 1;
+					tmp = tmp->pre;
+				}
+			}else if(d_count > MAX_VALUE){
+				for(i = d_count - MAX_VALUE;i > 0;i --){
+					tmp->ghost = 1;
+				}
+			}
+		}
+		if(p_count > MAX_VALUE){
+			tmp = p_tail;
+			if(p_count >MAX_VALUE + GHOST){
+				for(i = p_count - MAX_VALUE + GHOST;i > 0;i --){
+					tmp->o_size = 1;
+					tmp = tmp->pre;
+				}
+				for(i = GHOST;i > 0;i --){
+					tmp->ghost = 1;
+					tmp = tmp->pre;
+				}
+			}else if(p_count > MAX_VALUE){
+				for(i = p_count - MAX_VALUE;i > 0;i --){
+					tmp->ghost = 1;
+				}
+			}
+		}
+		tmp = NULL;
 	
         }
 	
 
-	fprintf(o, "%4d\t%5f\t%5f\n",MAX_VALUE, (float)hit/myindex, (float)write_p/myindex);
+	fprintf(o, "total:%4d\t%5f\t%5f\n\n",MAX_VALUE, (float)hit/myindex, (float)write_p/myindex);
 	//fprintf(stdout, "%4d\t%5f\t%5f\n",MAX_VALUE, (float)hit/myindex, (float)write_p/myindex);
 	//printf("ycount:%d %f%% \n",y_count, (float)y_count/myindex);
 	fclose(o);
