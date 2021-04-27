@@ -3,7 +3,12 @@
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <sys/stat.h>
+#include <sys/mman.h>
+#include <fcntl.h>
+#include <string.h>
 pid_t pid;
+
 
 //Determine if over max size or not
 int p_count = 0;
@@ -37,6 +42,8 @@ int myindex = 0;	//index is conflict to finction been declared
 int hit = 0;
 int hit_ghost = 0;	//hit on ghost
 int hit_o= 0;		//hit on original size
+//if one process done first done = -1
+int done = 0;
 
 /*Change the size of each process
  */
@@ -46,11 +53,13 @@ void handler(int sig_num){
 		kill(pid,SIGALRM);
 	}
 	signal(SIGALRM, handler);
-	int done = 0;
-	//next hit predict
+	//next hit (predict)
 	float n_hit = 0;
 	float n_hit_ghost = 0;
 	float n_hit_o = 0;
+	float c_hit = 0;
+	float c_hit_ghost = 0;
+	float c_hit_o = 0;
 	float percent = 0.0;
 	float percent_child = 0.0;
 	float slope_child = 0.0;
@@ -61,16 +70,25 @@ void handler(int sig_num){
 		old_hit = (float)hit / myindex;
 		old_hit_ghost = (float)hit_ghost / myindex;
 		old_hit_o = (float)hit_o / myindex;
+	fprintf(o, "n_hit:%f o_hit:%f ",n_hit, old_hit);
 	}
 	printf("old_hit_o:%f\n", old_hit_o);
 	printf("hit_o:%d\n", hit_o);
 	printf("myindex:%d\n", myindex);
 
-	n_hit = 0.7 * old_hit + 0.3*(hit/myindex); 
-	n_hit_ghost = 0.7 * old_hit_ghost + 0.3*(hit_ghost/myindex); 
-	n_hit_o = 0.7 * old_hit_o + 0.3*(hit_o/myindex); 
+	c_hit = (float)hit_ghost / myindex;
+	c_hit_ghost = (float)hit_ghost / myindex;
+	c_hit_o = (float)hit_o / myindex;
+
+	fprintf(o, "n_hit:%f o_hit:%f ",n_hit, old_hit);
+	n_hit = 0.7 * old_hit + 0.3 * c_hit;
+	n_hit_ghost = 0.7 * old_hit_ghost + 0.3 * c_hit_ghost;
+	n_hit_o = 0.7 * old_hit_o + 0.3 * c_hit_o;
 	printf("n_hit: %f\n",n_hit);
 	percent = n_hit/n_hit_o;
+
+
+	fprintf(o, "n_hit:%f o_hit:%f ",n_hit, old_hit);
 
 	
 	
@@ -86,6 +104,9 @@ void handler(int sig_num){
 	hit_ghost = 0;
 	myindex = 0;
 	MAX_VALUE --;
+	old_hit = n_hit;
+	old_hit_ghost =  n_hit_ghost;
+	old_hit_o = n_hit_o;
 	return ;
 }
 
@@ -122,7 +143,7 @@ int main(int argc, char* argv[]){
 	//Deleted block name
 	int d_b_name;
 
-	//count of dram is youmger than pram
+	//count of dram is younger than pram
 	int y_count = 0;
 	
 	hmap_init(&dram);
@@ -177,6 +198,7 @@ int main(int argc, char* argv[]){
                 return -1;
         }
 	}
+
 
 
 	fprintf(o, "Begin:\n");
@@ -354,6 +376,7 @@ int main(int argc, char* argv[]){
 	fclose(o);
 	fclose(f);
 	alarm(0);
+	done = -1;	//process done 
 	printf("done\n");
 	int exit_status;
 	wait(&exit_status);
