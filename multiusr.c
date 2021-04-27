@@ -11,7 +11,8 @@
 pid_t pid;
 
 struct M{
-	int carry[4];
+	long mtype;
+	float carry[4];
 }m_buffer;
 int msqid;
 key_t key;
@@ -34,6 +35,8 @@ float slope;
 
 FILE *f, *o;
 
+int k = 0;
+int h = 100;
 //Use these variable to mark blocks
 int MAX_VALUE;
 int O_VALUE;
@@ -60,6 +63,12 @@ void handler(int sig_num){
 	if(pid != 0){
 		kill(pid,SIGALRM);
 	}
+	if(done == -1){
+		MAX_VALUE = O_VALUE;
+		printf("-1 %d alarm\n", getpid());
+		fprintf(o, "%4d\t%5f\t%5f\n",MAX_VALUE, (float)hit/myindex, (float)write_p/myindex);
+		return ;
+	}
 	signal(SIGALRM, handler);
 	//next hit (predict)
 	float n_hit = 0;
@@ -72,13 +81,14 @@ void handler(int sig_num){
 	float percent_child = 0.0;
 	float slope_child = 0.0;
 	int i = 0;
+	int change = 0;
 
 	if(old_hit == 0.0){
 		printf("in\n");
 		old_hit = (float)hit / myindex;
 		old_hit_ghost = (float)hit_ghost / myindex;
 		old_hit_o = (float)hit_o / myindex;
-	fprintf(o, "n_hit:%f o_hit:%f ",n_hit, old_hit);
+	//fprintf(o, "n_hit:%f o_hit:%f ",n_hit, old_hit);
 	}
 	printf("old_hit_o:%f\n", old_hit_o);
 	printf("hit_o:%d\n", hit_o);
@@ -88,7 +98,7 @@ void handler(int sig_num){
 	c_hit_ghost = (float)hit_ghost / myindex;
 	c_hit_o = (float)hit_o / myindex;
 
-	fprintf(o, "n_hit:%f o_hit:%f ",n_hit, old_hit);
+	//fprintf(o, "n_hit:%f o_hit:%f ",n_hit, old_hit);
 	n_hit = 0.7 * old_hit + 0.3 * c_hit;
 	n_hit_ghost = 0.7 * old_hit_ghost + 0.3 * c_hit_ghost;
 	n_hit_o = 0.7 * old_hit_o + 0.3 * c_hit_o;
@@ -96,25 +106,103 @@ void handler(int sig_num){
 	percent = n_hit/n_hit_o;
 
 
-	fprintf(o, "n_hit:%f o_hit:%f ",n_hit, old_hit);
+	//fprintf(o, "n_hit:%f o_hit:%f ",n_hit, old_hit);
+	
+	//initial m_buffer
+	m_buffer.carry[0] = 0.0;
+	m_buffer.carry[1] = 0.0;
+	m_buffer.carry[2] = 0.0;
+	m_buffer.carry[3] = 0.0;
+	//msg sent to parrent
+	if(pid == 0){
+		m_buffer.carry[0] = (double)percent;
+		m_buffer.carry[1] = (double)n_hit_ghost/n_hit_o;
+		m_buffer.carry[2] = (double)MAX_VALUE;
+		//fprintf(o,"child %lf %lf %d\n",m_buffer.carry[0],m_buffer.carry[1], (int)m_buffer.carry[2]);
+		m_buffer.mtype = 1;	//child to parent
+		msgsnd(msqid, &m_buffer, 32, 0);
+		fprintf(o,"child s%f %f %d\n",m_buffer.carry[0],m_buffer.carry[1], (int)m_buffer.carry[2]);
+		if(msgrcv(msqid, &m_buffer, 32, 0, 0) == -1){
+			perror("msgrcv");
+			exit(1);
+		}
+		change = (int)m_buffer.carry[0];
+		fprintf(o,"childr %d\n",(int)m_buffer.carry[0]);
+	}
+	//parent rcv
+	if(pid > 0){
+		if(msgrcv(msqid, &m_buffer, 32, 0, 0) == -1){
+			perror("msgrcv");
+			exit(1);
+		}
+		if((int)m_buffer.carry[3] == -1){
+			done = -1;
+			MAX_VALUE = O_VALUE;
+			printf("-1 %d alarm\n", getpid());
+			fprintf(o, "%4d\t%5f\t%5f\n",MAX_VALUE, (float)hit/myindex, (float)write_p/myindex);
+			return ;
+		}
+		
+		fprintf(o,"parent r%lf %lf %d\n",m_buffer.carry[0],m_buffer.carry[1], (int)m_buffer.carry[2]);
+		float diff, c_percent;
+		int c_size = m_buffer.carry[2];
+		c_percent = (float)m_buffer.carry[0];
+		diff = percent - (float)m_buffer.carry[0];
+		if(c_percent < percent){
+		while(diff > 0){
+			if(c_percent < 0.5){
+				change = (0.5-c_percent) * O_VALUE;
+				if(change > (MAX_VALUE - 4)){
+					change = MAX_VALUE - 4;
+					break;
+					
+				}
+			}
+			change ++;
+			c_percent  = c_percent *(c_size+change)/c_size;
+			diff = percent - c_percent;
+		}
+		}
+		else if(c_percent > percent){
+			diff = c_percent - percent;
+		while(diff > 0){
+			if(percent < 0.5){
+				change = (0.5 - percent) * O_VALUE;
+			}
+			change ++;
+			if(change > (c_size-4)){
+				change = c_size - 4;
+				break;
+			}
+			percent  = percent *(MAX_VALUE +change)/MAX_VALUE;
+			diff = c_percent - percent;
+		}
+		change = 0-change;
+		}
+
+
+		m_buffer.carry[0] = (double)change;
+		m_buffer.mtype = 2;	//child to parent
+		msgsnd(msqid, &m_buffer, 8, 0);
+		fprintf(o,"parent s %d \n",(int)m_buffer.carry[0]);
+	}
 
 	
 	
-	if(done == -1){
-		MAX_VALUE = O_VALUE;
-		printf("-1 %d alarm\n", getpid());
-		fprintf(o, "%4d\t%5f\t%5f\n",MAX_VALUE, (float)hit/myindex, (float)write_p/myindex);
-		return ;
-	}
-	fprintf(o, "%4d\t%5f\t%5f\n",MAX_VALUE, (float)hit/myindex, (float)write_p/myindex);
+	fprintf(o, "%4d\t%5f\t%5fpercent:%5f\n",MAX_VALUE, (float)hit/myindex, (float)write_p/myindex, percent);
 	hit = 0;
 	hit_o = 0;
 	hit_ghost = 0;
 	myindex = 0;
-	MAX_VALUE --;
+	//MAX_VALUE --;
 	old_hit = n_hit;
 	old_hit_ghost =  n_hit_ghost;
 	old_hit_o = n_hit_o;
+	if(pid == 0){
+		MAX_VALUE += change;
+	}else if(pid > 0){
+		MAX_VALUE -= change;
+	}
 	return ;
 }
 
@@ -352,7 +440,7 @@ int main(int argc, char* argv[]){
 		if(d_count > MAX_VALUE){
 			tmp = d_tail;
 			if(d_count >MAX_VALUE + GHOST){
-				for(i = d_count - MAX_VALUE + GHOST;i > 0;i --){
+				for(i = d_count - (MAX_VALUE + GHOST);i > 0;i --){
 					tmp->o_size = 1;
 					tmp = tmp->pre;
 				}
@@ -369,7 +457,7 @@ int main(int argc, char* argv[]){
 		if(p_count > MAX_VALUE){
 			tmp = p_tail;
 			if(p_count >MAX_VALUE + GHOST){
-				for(i = p_count - MAX_VALUE + GHOST;i > 0;i --){
+				for(i = p_count - (MAX_VALUE + GHOST);i > 0;i --){
 					tmp->o_size = 1;
 					tmp = tmp->pre;
 				}
@@ -395,9 +483,23 @@ int main(int argc, char* argv[]){
 	fclose(f);
 	alarm(0);
 	done = -1;	//process done 
+	//child done first
+	if(pid == 0){
+		m_buffer.carry[3] = (double)-1;
+		m_buffer.mtype = 1;
+		msgsnd(msqid, &m_buffer, 32, 0);
+	}
+
 	printf("done\n");
 	int exit_status;
-	wait(&exit_status);
+	if(pid > 0)
+		wait(&exit_status);
+	//msg Q close
+	if(pid > 0)
+	if (msgctl (msqid, IPC_RMID, NULL) == -1) {
+            	perror ("client: msgctl");
+            	exit (1);
+    	}
         return 0;
 
 
