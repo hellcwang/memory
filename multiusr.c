@@ -4,10 +4,18 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/stat.h>
-#include <sys/mman.h>
+#include <sys/msg.h>
 #include <fcntl.h>
 #include <string.h>
+//pid for fork()
 pid_t pid;
+
+struct M{
+	int carry[4];
+}m_buffer;
+int msqid;
+key_t key;
+#define PERMS 0644
 
 
 //Determine if over max size or not
@@ -160,6 +168,16 @@ int main(int argc, char* argv[]){
 
 
 
+
+	//msq initial
+	if((key = ftok(".",99)) == -1){
+		perror("ftok");
+		exit(1);
+	}
+	if((msqid = msgget(key, PERMS | IPC_CREAT)) == -1){
+		perror("msgget");
+		exit(1);
+	}
 	/*process 0*/
 	if(pid > 0){
 	sprintf(buffer, "mul/%s", argv[2]);
