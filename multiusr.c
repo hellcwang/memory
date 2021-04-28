@@ -104,6 +104,7 @@ void handler(int sig_num){
 	n_hit_o = 0.7 * old_hit_o + 0.3 * c_hit_o;
 	printf("n_hit: %f\n",n_hit);
 	percent = n_hit/n_hit_o;
+	fprintf(o, "n_hit:%f n_hit_o:%f\n", n_hit, n_hit_o);
 
 
 	//fprintf(o, "n_hit:%f o_hit:%f ",n_hit, old_hit);
@@ -439,13 +440,14 @@ int main(int argc, char* argv[]){
 		//Mark
 		if(d_count > MAX_VALUE){
 			tmp = d_tail;
-			if(d_count >MAX_VALUE + GHOST){
+			if(d_count >(MAX_VALUE + GHOST)){
 				for(i = d_count - (MAX_VALUE + GHOST);i > 0;i --){
 					tmp->o_size = 1;
 					tmp = tmp->pre;
 				}
 				for(i = GHOST;i > 0;i --){
 					tmp->ghost = 1;
+					tmp->o_size = 0;
 					tmp = tmp->pre;
 				}
 			}else if(d_count > MAX_VALUE){
@@ -453,10 +455,17 @@ int main(int argc, char* argv[]){
 					tmp->ghost = 1;
 				}
 			}
+			tmp = tmp->pre;
+			while(tmp != NULL){
+				tmp->ghost = 0;
+				tmp->o_size = 0;
+				tmp = tmp->pre;
+			}
+
 		}
 		if(p_count > MAX_VALUE){
 			tmp = p_tail;
-			if(p_count >MAX_VALUE + GHOST){
+			if(p_count >(MAX_VALUE + GHOST)){
 				for(i = p_count - (MAX_VALUE + GHOST);i > 0;i --){
 					tmp->o_size = 1;
 					tmp = tmp->pre;
@@ -469,6 +478,12 @@ int main(int argc, char* argv[]){
 				for(i = p_count - MAX_VALUE;i > 0;i --){
 					tmp->ghost = 1;
 				}
+			}
+			tmp = tmp->pre;
+			while(tmp != NULL){
+				tmp->ghost = 0;
+				tmp->o_size = 0;
+				tmp = tmp->pre;
 			}
 		}
 		tmp = NULL;
