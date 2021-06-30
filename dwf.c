@@ -112,7 +112,7 @@ int main(int argc, char* argv[]){
 					}
 					d_count --;
 				}
-				hmap_add(b_name, block_add(b_name, &d_head, &d_tail, index++), dram);
+				hmap_add(b_name, block_add(b_name, &d_head, &d_tail, index), dram);
 			}
 			//Put read in PRAM to protect PRAM
 			else if(read == 1){
@@ -122,7 +122,7 @@ int main(int argc, char* argv[]){
 					p_count --;
 				}
 				write_p ++;
-				hmap_add(b_name, block_add(b_name, &p_head, &p_tail, index++), pram);
+				hmap_add(b_name, block_add(b_name, &p_head, &p_tail, index), pram);
 			}
 
 		//Cache hit

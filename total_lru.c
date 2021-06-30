@@ -88,14 +88,14 @@ int main(int argc, char* argv[]){
 					d_count --;
 					type_count --;					//delete from pram
 				}
-				hmap_add(b_name, block_add(b_name, &d_head, &d_tail, index++), dram);
+				hmap_add(b_name, block_add(b_name, &d_head, &d_tail, index), dram);
 			
 
 		//Cache hit
 		}else{
 			hit++;
 			if(block_find(b_name, dram) != NULL){
-				if(block_find(b_name, dram)->type == 1 && read == 0)
+				if(block_find(b_name, dram)->type == 1 )
 				       write_p ++;	
 			       	block_alter(locate = block_find(b_name, dram), &d_head, &d_tail);
 				if(locate->type == 1){

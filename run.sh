@@ -3,7 +3,7 @@ END=1000
 
 while read line
 do
-	for i in {2..1000..50};
+	for i in {100..1000..20};
 	do
 		./dwf $i $line
 	done &

@@ -24,3 +24,8 @@ total_lru:total_lru.c lru.o
 	$(CC) -c -g total_lru.c
 	$(CC) -o total_lru total_lru.o lru.o -g
 	rm total_lru.o
+
+multi:multiusr.c lru.o
+	$(CC) -c -g  multiusr.c 
+	$(CC) -o multi   multiusr.o lru.o -g 
+	rm multiusr.o

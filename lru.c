@@ -118,6 +118,8 @@ node* block_add(int b_name, node** head, node** tail,int index){
 	new->index  = index;
 	new->blockname = b_name;	
 	new->type = 0; //default is dram(0),pram is (1)
+	new->ghost = 0;	//defult is not ghost buffer
+	new->o_size = 0;//defult is not original size
 	
 	return new;
 }
@@ -137,6 +139,8 @@ void block_alter(node* n, node** head, node** tail){
 		(*head)->pre = n;
 	}
 	*head = n;
+	(*head)->ghost = 0;
+	(*head)->o_size = 0;
 	return ;
 }
 

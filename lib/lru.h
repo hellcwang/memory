@@ -34,6 +34,8 @@ typedef struct Node{
         struct Node *pre;
 	unsigned int index;
 	int type;
+	char ghost;	//ghost buffer
+	char o_size;	//original size
         unsigned int blockname;
         struct Node *next;
 }node;

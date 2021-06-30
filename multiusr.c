@@ -38,8 +38,10 @@ FILE *f, *o;
 int k = 0;
 int h = 100;
 //Use these variable to mark blocks
-int MAX_VALUE;
-int O_VALUE;
+volatile int MAX_VALUE;
+volatile int MAX_VALUE_P;	//maxvlue of dram
+volatile int MAX_VALUE_D;	//maxvalue of pram
+int O_VALUE;		//orginal size
 int GHOST = 3;		//Can change to find best solution.
 
 
@@ -49,13 +51,22 @@ float old_hit_ghost = 0.0;	//hit on ghost
 float old_hit_o= 0.0;		//hit on original size
 
 //Use myindex to represent the order
-int myindex = 0;	//index is conflict to finction been declared
-int hit = 0;
-int hit_ghost = 0;	//hit on ghost
+
+volatile int myindex = 0;	//index is conflict to finction been declared
+volatile int hit = 0;
+volatile int hit_ghost = 0;	//hit on ghost
 int hit_o= 0;		//hit on original size
 //if one process done first done = -1
 int done = 0;
 
+//record for total value
+int myindex_t = 0;	//total index for trace 	
+int hit_t = 0;
+int write_p_t = 0;
+
+void p (void){
+	printf("%d\n\n\n",myindex);
+}
 /*Change the size of each process
  */
 void handler(int sig_num){
@@ -64,9 +75,9 @@ void handler(int sig_num){
 		kill(pid,SIGALRM);
 	}
 	if(done == -1){
-		MAX_VALUE = O_VALUE;
+		//MAX_VALUE = O_VALUE;
 		printf("-1 %d alarm\n", getpid());
-		fprintf(o, "%4d\t%5f\t%5f\n",MAX_VALUE, (float)hit/myindex, (float)write_p/myindex);
+		//fprintf(o, "%4d\t%5f\t%5f\n",MAX_VALUE, (float)hit/myindex, (float)write_p/myindex);
 		return ;
 	}
 	signal(SIGALRM, handler);
@@ -104,7 +115,7 @@ void handler(int sig_num){
 	n_hit_o = 0.7 * old_hit_o + 0.3 * c_hit_o;
 	printf("n_hit: %f\n",n_hit);
 	percent = n_hit/n_hit_o;
-	fprintf(o, "n_hit:%f n_hit_o:%f\n", n_hit, n_hit_o);
+	//fprintf(o, "n_hit:%f n_hit_o:%f\n", n_hit, n_hit_o);
 
 
 	//fprintf(o, "n_hit:%f o_hit:%f ",n_hit, old_hit);
@@ -122,13 +133,15 @@ void handler(int sig_num){
 		//fprintf(o,"child %lf %lf %d\n",m_buffer.carry[0],m_buffer.carry[1], (int)m_buffer.carry[2]);
 		m_buffer.mtype = 1;	//child to parent
 		msgsnd(msqid, &m_buffer, 32, 0);
-		fprintf(o,"child s%f %f %d\n",m_buffer.carry[0],m_buffer.carry[1], (int)m_buffer.carry[2]);
+		//fprintf(o,"child s%f %f %d\n",m_buffer.carry[0],m_buffer.carry[1], (int)m_buffer.carry[2]);
 		if(msgrcv(msqid, &m_buffer, 32, 0, 0) == -1){
 			perror("msgrcv");
 			exit(1);
 		}
+		if((int)m_buffer.carry[3] == -1)
+			done = -1;
 		change = (int)m_buffer.carry[0];
-		fprintf(o,"childr %d\n",(int)m_buffer.carry[0]);
+		//fprintf(o,"childr %d\n",(int)m_buffer.carry[0]);
 	}
 	//parent rcv
 	if(pid > 0){
@@ -138,13 +151,13 @@ void handler(int sig_num){
 		}
 		if((int)m_buffer.carry[3] == -1){
 			done = -1;
-			MAX_VALUE = O_VALUE;
+			//MAX_VALUE = O_VALUE;
 			printf("-1 %d alarm\n", getpid());
-			fprintf(o, "%4d\t%5f\t%5f\n",MAX_VALUE, (float)hit/myindex, (float)write_p/myindex);
+			//fprintf(o, "%4d\t%5f\t%5f\n",MAX_VALUE, (float)hit/myindex, (float)write_p/myindex);
 			return ;
 		}
 		
-		fprintf(o,"parent r%lf %lf %d\n",m_buffer.carry[0],m_buffer.carry[1], (int)m_buffer.carry[2]);
+		//fprintf(o,"parent r%lf %lf %d\n",m_buffer.carry[0],m_buffer.carry[1], (int)m_buffer.carry[2]);
 		float diff, c_percent;
 		int c_size = m_buffer.carry[2];
 		c_percent = (float)m_buffer.carry[0];
@@ -185,16 +198,18 @@ void handler(int sig_num){
 		m_buffer.carry[0] = (double)change;
 		m_buffer.mtype = 2;	//child to parent
 		msgsnd(msqid, &m_buffer, 8, 0);
-		fprintf(o,"parent s %d \n",(int)m_buffer.carry[0]);
+		//fprintf(o,"parent s %d \n",(int)m_buffer.carry[0]);
 	}
 
 	
 	
-	fprintf(o, "%4d\t%5f\t%5fpercent:%5f\n",MAX_VALUE, (float)hit/myindex, (float)write_p/myindex, percent);
+	//fprintf(o, "%4d\t%5f\t%5fpercent:%5f\t%d\n",MAX_VALUE, (float)hit/myindex, (float)write_p/myindex, percent, myindex);
 	hit = 0;
 	hit_o = 0;
 	hit_ghost = 0;
+	write_p = 0;
 	myindex = 0;
+	p();
 	//MAX_VALUE --;
 	old_hit = n_hit;
 	old_hit_ghost =  n_hit_ghost;
@@ -210,12 +225,12 @@ void handler(int sig_num){
 
 
 int main(int argc, char* argv[]){
+	//Set handler
 	signal(SIGALRM, handler);
 	
 
 	//fork() initial
 	pid = fork();
-	
 
 	//Use to map for to type of memory
 	//Need to indepdent linked list
@@ -249,10 +264,13 @@ int main(int argc, char* argv[]){
 
 	O_VALUE = atoi(argv[1]);
 	MAX_VALUE = atoi(argv[1])/2;
+	MAX_VALUE_P = MAX_VALUE;
+	MAX_VALUE_D = MAX_VALUE;
         float time;
         int user, b_name, size, read;
 	char buffer[100] = {0};
 	int i, j;
+	int index = 0;		//local index for ram
 	node *tmp, *find;	//tmp is for MARK, find for 
 
 
@@ -308,7 +326,7 @@ int main(int argc, char* argv[]){
 
 
 
-	fprintf(o, "Begin:\n");
+	//fprintf(o, "Begin:\n");
 	if(pid > 0)
 		ualarm(100000, 100000);
         while(fscanf(f, "%f %d %d %d %d", &time, &user, &b_name, &size, &read)== 5){
@@ -317,7 +335,9 @@ int main(int argc, char* argv[]){
 		//for(int i = 0;i < 1000;i ++);
 		//printf("line:%d ", line++);
 		//printf("%d:%d ",getpid(), myindex);
+		index ++;
 		myindex ++;
+		myindex_t ++;
 
 		
 		if(block_find(b_name, dram) == NULL && block_find(b_name, pram) == NULL){
@@ -333,6 +353,7 @@ int main(int argc, char* argv[]){
 					//U can put node from DRAM to PRAM directly
 					if(p_head== NULL){
 					        write_p ++;
+					        write_p_t ++;
 						//printf("d->p ");
 						//move from dram to pram
 						tmp_b_name = d_tail->blockname;
@@ -346,6 +367,7 @@ int main(int argc, char* argv[]){
 					}else if(p_tail != NULL && d_tail->index > p_tail->index){
 						p_count ++;
 					        write_p ++;
+					        write_p_t ++;
 						y_count++;
 						//printf("d->p ");
 						//move from dram to pram
@@ -368,7 +390,7 @@ int main(int argc, char* argv[]){
 					}
 					d_count --;
 				}
-				hmap_add(b_name, block_add(b_name, &d_head, &d_tail, myindex++), dram);
+				hmap_add(b_name, block_add(b_name, &d_head, &d_tail, index), dram);
 			}
 			//Put read in PRAM to protect PRAM
 			else if(read == 1){
@@ -379,7 +401,7 @@ int main(int argc, char* argv[]){
 					p_count --;
 				}
 				write_p ++;
-				hmap_add(b_name, block_add(b_name, &p_head, &p_tail, myindex++), pram);
+				hmap_add(b_name, block_add(b_name, &p_head, &p_tail, index), pram);
 			}
 
 		//Cache hit
@@ -392,6 +414,7 @@ int main(int argc, char* argv[]){
 				if(find->ghost ==0 && find->o_size == 0){
 					hit_ghost ++;
 					hit ++;
+					hit_t ++;
 				}else if(find ->ghost){
 					hit_ghost ++;
 				}
@@ -404,12 +427,14 @@ int main(int argc, char* argv[]){
 				if(find->ghost ==0 && find->o_size == 0){
 					hit_ghost ++;
 					hit ++;
+					hit_t ++;
 				}else if(find ->ghost){
 					hit_ghost ++;
 				}
 
 				if(read == 0){
 					write_p ++;
+					write_p_t ++;
 					locate = block_find(b_name, pram);
 					tmp_b_name = locate->blockname;
 					tmp_index = locate->index;
@@ -491,7 +516,9 @@ int main(int argc, char* argv[]){
         }
 	
 
-	fprintf(o, "total:%4d\t%5f\t%5f\n\n",MAX_VALUE, (float)hit/myindex, (float)write_p/myindex);
+	fprintf(o, "%d\t%d\t%5f\t%5f\t\n", MAX_VALUE, O_VALUE, (float)hit_t/myindex_t,(float)write_p_t/myindex_t);
+	//fprintf(o, "total:%4d\t%5f\t%5f\n\n",MAX_VALUE, (float)hit_t/myindex_t, (float)write_p_t/myindex_t);
+	//fprintf(o, "total:%4d\t%d\t%d\tmyindex_t%d\n",MAX_VALUE, hit_t, myindex, myindex_t);
 	//fprintf(stdout, "%4d\t%5f\t%5f\n",MAX_VALUE, (float)hit/myindex, (float)write_p/myindex);
 	//printf("ycount:%d %f%% \n",y_count, (float)y_count/myindex);
 	fclose(o);
@@ -502,6 +529,11 @@ int main(int argc, char* argv[]){
 	if(pid == 0){
 		m_buffer.carry[3] = (double)-1;
 		m_buffer.mtype = 1;
+		msgsnd(msqid, &m_buffer, 32, 0);
+	}
+	else if(pid > 0){
+		m_buffer.carry[3] = (double)-1;
+		m_buffer.mtype = 2;
 		msgsnd(msqid, &m_buffer, 32, 0);
 	}
 
